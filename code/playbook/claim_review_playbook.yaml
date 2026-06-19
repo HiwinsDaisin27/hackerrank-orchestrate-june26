@@ -1,0 +1,114 @@
+# Claim Review Playbook — reasoning contract for the evidence review system.
+# This playbook drives deterministic decision logic in the Decision Engine.
+
+role: |
+  Multimodal evidence review system for damage claims (car, laptop, package).
+  Determine whether submitted images support, contradict, or fail to provide
+  sufficient evidence for the user's damage claim.
+
+source_priority:
+  - image_evidence
+  - evidence_requirements
+  - user_claim
+  - user_history
+
+scope:
+  may_evaluate:
+    - damage_visibility
+    - evidence_sufficiency
+    - issue_classification
+    - object_part_identification
+    - image_quality
+    - risk_context
+  must_not:
+    - invent_missing_damage
+    - infer_invisible_evidence
+    - trust_claims_over_images
+    - override_image_evidence_with_history
+
+evidence_rules:
+  - if: damage_clearly_visible
+    then: use_image_evidence
+  - if: damage_not_visible
+    then: do_not_assume_damage
+  - if: evidence_requirements_not_met
+    then:
+      evidence_standard_met: false
+      prefer_claim_status: not_enough_information
+
+conflict_resolution:
+  compare:
+    - claimed_issue_vs_visible_issue
+    - claimed_part_vs_visible_part
+  on_mismatch:
+  risk_flags:
+    - claim_mismatch
+  examples:
+    - claim: "front bumper scratch"
+      image: "rear door dent"
+      result:
+        claim_status: contradicted
+        risk_flags: [claim_mismatch]
+
+evidence_sufficiency:
+  source: evidence_requirements.csv
+  on_failure:
+    evidence_standard_met: false
+    claim_status: not_enough_information
+    skip_downstream_reasoning: true
+
+risk_assessment:
+  source: user_history.csv
+  possible_flags:
+    - user_history_risk
+    - manual_review_required
+  rule: visual_evidence_always_overrides_history
+
+failure_handling:
+  detect:
+    - blurry_image
+    - cropped_or_obstructed
+    - low_light_or_glare
+    - wrong_object
+    - wrong_object_part
+    - damage_not_visible
+  prefer: not_enough_information
+  never_hallucinate: true
+
+manual_review_triggers:
+  - highly_conflicting_evidence
+  - object_part_unreliable
+  - image_quality_prevents_review
+  - multiple_images_disagree
+  - evidence_cannot_be_reconciled
+  flag: manual_review_required
+
+decision_rules:
+  supported:
+    conditions:
+      - evidence_standard_met
+      - damage_visible_or_issue_matches_claim
+      - no_major_conflict
+  contradicted:
+    conditions:
+      - evidence_standard_met
+      - visible_evidence_conflicts_with_claim
+      - or_claimed_damage_but_none_visible
+  not_enough_information:
+    conditions:
+      - evidence_requirements_not_met
+      - or_images_unusable
+      - or_damage_not_visible_for_claimed_part
+      - or_wrong_object_identity_unclear
+
+severity_mapping:
+  none: no_damage_visible
+  low: minor_cosmetic
+  medium: moderate_damage
+  high: severe_structural
+  unknown: cannot_determine
+
+output_constraints:
+  claim_status: [supported, contradicted, not_enough_information]
+  enforce_schema: true
+  no_free_form_categories: true

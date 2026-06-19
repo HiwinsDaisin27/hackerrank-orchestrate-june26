@@ -201,8 +201,8 @@ without updating this file.
 
 - **Deterministic where possible.**.
 - **Add proper README** to the code/ you write.
-- **Read secrets from env vars only** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
-  etc.). Never hardcode.
+- **Read secrets from env vars only** (`GOOGLE_API_KEY`, `OPENAI_API_KEY`).
+  Never hardcode.
 ---
 
 

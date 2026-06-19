@@ -1,0 +1,5 @@
+# Vision Analysis Prompt (image-only stage)
+
+Analyze each image independently based ONLY on visual evidence.
+Do not use claim conversation. Return per-image JSON with quality flags,
+detected object, issue_type, object_part, severity, damage_visible.
